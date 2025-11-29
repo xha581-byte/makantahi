@@ -1,1 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>简单数据分析后台</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f5f5f5;
+      color: #222;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .card-title {
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .flex {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 150px;
+      min-width: 120px;
+    }
+    label {
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: #555;
+    }
+    input {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      font-size: 13px;
+    }
+    input:focus {
+      outline: none;
+      border-color: #1677ff;
+      box-shadow: 0 0 0 1px rgba(22,119,255,0.2);
+    }
+    button {
+      border-radius: 8px;
+      border: none;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      background: #1677ff;
+      color: #fff;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      border-bottom: 1px solid #eee;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    th {
+      background: #fafafa;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+    .tag-good {
+      background: #e6fffb;
+      color: #08979c;
+      border: 1px solid #87e8de;
+    }
+    .tag-bad {
+      background: #fff1f0;
+      color: #cf1322;
+      border: 1px solid #ffa39e;
+    }
+    .summary-item {
+      font-size: 13px;
+      margin-right: 16px;
+      margin-bottom: 4px;
+    }
+    .summary-highlight {
+      font-weight: 600;
+    }
+    .badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #f0f5ff;
+      color: #2f54eb;
+      font-size: 11px;
+      border: 1px solid #adc6ff;
+    }
+    @media (max-width: 720px) {
+      th, td {
+        padding: 4px 6px;
+      }
+      .card {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>数据好坏分析后台（本地版）</h1>
+    <p style="font-size:12px;color:#666;margin-top:0;">
+      使用方式：上面设定“什么算好”，下面一条条输入数据，系统会自动算 CTR / 转化率 / ROI，并标记好 / 坏。
+      所有数据只存在你浏览器里，不会上传到任何地方。
+    </p>
 
+    <!-- 阈值配置 -->
+    <div class="card">
+      <div class="card-title">
+        <span>阈值设置（什么叫“好”？）</span>
+        <span class="badge">你可以随时改，列表会实时重算</span>
+      </div>
+      <div class="flex">
+        <div class="field">
+          <label>最低点击率 CTR ≥（%）</label>
+          <input type="number" id="ctrThreshold" value="5" step="0.1" />
+        </div>
+        <div class="field">
+          <label>最低转化率 CVR ≥（%）</label>
+          <input type="number" id="cvrThreshold" value="2" step="0.1" />
+        </div>
+        <div class="field">
+          <label>最低 ROI ≥（%）</label>
+          <input type="number" id="roiThreshold" value="0" step="0.1" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据输入 -->
+    <div class="card">
+      <div class="card-title">
+        <span>新增一条数据</span>
+        <span style="font-size:11px;color:#999;">建议当成：一个活动 / 一个日期 / 一个广告组</span>
+      </div>
+      <form id="dataForm">
+        <div class="flex">
+          <div class="field">
+            <label>名称（必填，如“活动A-2025-11-29”）</label>
+            <input type="text" id="name" required />
+          </div>
+          <div class="field">
+            <label>日期（可选）</label>
+            <input type="date" id="date" />
+          </div>
+          <div class="field">
+            <label>发送量 / 曝光数</label>
+            <input type="number" id="sent" min="0" step="1" />
+          </div>
+          <div class="field">
+            <label>点击数</label>
+            <input type="number" id="clicks" min="0" step="1" />
+          </div>
+          <div class="field">
+            <label>转化数（注册/充值/下单）</label>
+            <input type="number" id="conversions" min="0" step="1" />
+          </div>
+          <div class="field">
+            <label>成本（Cost）</label>
+            <input type="number" id="cost" min="0" step="0.01" />
+          </div>
+          <div class="field">
+            <label>收入 / 充值金额（Revenue）</label>
+            <input type="number" id="revenue" min="0" step="0.01" />
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+          <button type="submit">添加到列表</button>
+          <button type="button" id="clearAll" style="background:#ff4d4f;">清空所有数据</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 汇总 -->
+    <div class="card" id="summaryCard" style="display:none;">
+      <div class="card-title">
+        <span>整体表现总结</span>
+      </div>
+      <div id="summaryContent" style="font-size:13px;"></div>
+    </div>
+
+    <!-- 数据表 -->
+    <div class="card">
+      <div class="card-title">
+        <span>数据明细</span>
+        <span style="font-size:11px;color:#999;">下方表格会根据阈值自动标记好 / 坏</span>
+      </div>
+      <div style="max-height:420px;overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>日期</th>
+              <th>发送量</th>
+              <th>点击</th>
+              <th>CTR%</th>
+              <th>转化</th>
+              <th>CVR%</th>
+              <th>成本</th>
+              <th>收入</th>
+              <th>ROI%</th>
+              <th>好 / 坏</th>
+            </tr>
+          </thead>
+          <tbody id="dataBody">
+            <!-- JS 渲染 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const data = []; // 存所有记录
+
+      const ctrInput = document.getElementById('ctrThreshold');
+      const cvrInput = document.getElementById('cvrThreshold');
+      const roiInput = document.getElementById('roiThreshold');
+      const dataForm = document.getElementById('dataForm');
+      const dataBody = document.getElementById('dataBody');
+      const clearAllBtn = document.getElementById('clearAll');
+      const summaryCard = document.getElementById('summaryCard');
+      const summaryContent = document.getElementById('summaryContent');
+
+      function parseNumber(value) {
+        const n = parseFloat(value);
+        return isNaN(n) ? 0 : n;
+      }
+
+      function computeMetrics(record) {
+        const ctr = record.sent > 0 ? (record.clicks / record.sent) * 100 : 0;
+        const cvr = record.clicks > 0 ? (record.conversions / record.clicks) * 100 : 0;
+        const roi = record.cost > 0 ? ((record.revenue - record.cost) / record.cost) * 100 : 0;
+        return { ctr, cvr, roi };
+      }
+
+      function isGood(record, thresholds) {
+        const { ctr, cvr, roi } = record.metrics;
+        return ctr >= thresholds.ctr && cvr >= thresholds.cvr && roi >= thresholds.roi;
+      }
+
+      function render() {
+        const thresholds = {
+          ctr: parseNumber(ctrInput.value),
+          cvr: parseNumber(cvrInput.value),
+          roi: parseNumber(roiInput.value)
+        };
+
+        dataBody.innerHTML = '';
+
+        let goodCount = 0;
+        let badCount = 0;
+        let bestRoiRecord = null;
+
+        data.forEach((item) => {
+          item.metrics = computeMetrics(item);
+          const good = isGood(item, thresholds);
+          if (good) goodCount++; else badCount++;
+
+          if (!bestRoiRecord || item.metrics.roi > bestRoiRecord.metrics.roi) {
+            bestRoiRecord = item;
+          }
+
+          const tr = document.createElement('tr');
+
+          function td(text) {
+            const cell = document.createElement('td');
+            cell.textContent = text;
+            return cell;
+          }
+
+          tr.appendChild(td(item.name || '-'));
+          tr.appendChild(td(item.date || '-'));
+          tr.appendChild(td(item.sent));
+          tr.appendChild(td(item.clicks));
+          tr.appendChild(td(item.metrics.ctr.toFixed(2)));
+          tr.appendChild(td(item.conversions));
+          tr.appendChild(td(item.metrics.cvr.toFixed(2)));
+          tr.appendChild(td(item.cost.toFixed(2)));
+          tr.appendChild(td(item.revenue.toFixed(2)));
+          tr.appendChild(td(item.metrics.roi.toFixed(2)));
+
+          const statusTd = document.createElement('td');
+          const span = document.createElement('span');
+          span.className = 'tag ' + (good ? 'tag-good' : 'tag-bad');
+          span.textContent = good ? '好' : '坏';
+          statusTd.appendChild(span);
+          tr.appendChild(statusTd);
+
+          dataBody.appendChild(tr);
+        });
+
+        if (data.length === 0) {
+          summaryCard.style.display = 'none';
+          return;
+        }
+
+        summaryCard.style.display = 'block';
+
+        const total = data.length;
+        const goodRate = total > 0 ? (goodCount / total) * 100 : 0;
+
+        let html = '';
+        html += `<div class="summary-item">总记录数：<span class="summary-highlight">${total}</span></div>`;
+        html += `<div class="summary-item">好记录：<span class="summary-highlight">${goodCount}</span> (${goodRate.toFixed(1)}%)</div>`;
+        html += `<div class="summary-item">坏记录：<span class="summary-highlight">${badCount}</span></div>`;
+
+        if (bestRoiRecord) {
+          html += `<div class="summary-item">ROI 最好：<span class="summary-highlight">${bestRoiRecord.name || '-'}</span>（ROI = ${bestRoiRecord.metrics.roi.toFixed(2)}%）</div>`;
+        }
+
+        summaryContent.innerHTML = html;
+      }
+
+      dataForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value.trim();
+        if (!name) {
+          alert('名称必填，比如：活动A-2025-11-29');
+          return;
+        }
+        const date = document.getElementById('date').value || '';
+        const sent = parseNumber(document.getElementById('sent').value);
+        const clicks = parseNumber(document.getElementById('clicks').value);
+        const conversions = parseNumber(document.getElementById('conversions').value);
+        const cost = parseNumber(document.getElementById('cost').value);
+        const revenue = parseNumber(document.getElementById('revenue').value);
+
+        const record = {
+          name,
+          date,
+          sent,
+          clicks,
+          conversions,
+          cost,
+          revenue,
+          metrics: {}
+        };
+        record.metrics = computeMetrics(record);
+
+        data.push(record);
+
+        dataForm.reset();
+        render();
+      });
+
+      clearAllBtn.addEventListener('click', function() {
+        if (data.length === 0) return;
+        if (confirm('确定要清空所有数据吗？这个操作不可恢复。')) {
+          data.length = 0;
+          render();
+        }
+      });
+
+      [ctrInput, cvrInput, roiInput].forEach(input => {
+        input.addEventListener('input', render);
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
