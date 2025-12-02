@@ -2,856 +2,187 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>留存 & 充值分析后台</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CSV 导入后台 - Google Sheets</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    :root {
-      --bg-main: #000000;
-      --bg-card: #111111;
-      --bg-card-soft: #151515;
-      --border-subtle: #2b2b2b;
-      --text-primary: #f5f5f7;
-      --text-secondary: #a1a1a6;
-      --text-muted: #666672;
-      --accent: #0a84ff;    /* Apple 蓝 */
-      --accent-soft: #0a84ff22;
-      --good: #30d158;      /* Apple 绿 */
-      --good-soft: #30d15822;
-      --bad: #ff453a;       /* Apple 红 */
-      --bad-soft: #ff453a22;
-      --radius-lg: 18px;
-      --radius-md: 12px;
-      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.6);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
     body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, -apple-system-body, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top left, #1c1c1e 0, #000000 45%, #000000 100%);
-      color: var(--text-primary);
-      -webkit-font-smoothing: antialiased;
     }
-
-    .app-shell {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 24px 16px 32px;
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px 24px 32px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
     }
-
-    header {
-      margin-bottom: 20px;
+    h1 {
+      margin-top: 0;
+      font-size: 22px;
     }
-
-    .title-row {
+    .card {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 12px;
+      background: #fafafa;
+      border: 1px solid #eee;
+    }
+    label {
+      font-size: 14px;
+      display: block;
+      margin-bottom: 8px;
+    }
+    input[type="file"] {
+      display: block;
+      margin-bottom: 12px;
+    }
+    .row {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       gap: 12px;
+      margin-bottom: 8px;
       flex-wrap: wrap;
     }
-
-    h1 {
-      font-size: 24px;
-      letter-spacing: 0.02em;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .pill {
-      padding: 3px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: var(--text-secondary);
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-      backdrop-filter: blur(20px);
-    }
-
-    .subtitle {
-      margin-top: 6px;
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .card-grid {
-      display: grid;
-      grid-template-columns: 1.3fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-
-    @media (max-width: 900px) {
-      .card-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .card {
-      background: radial-gradient(circle at top, #1c1c1e 0, #111111 55%);
-      border-radius: var(--radius-lg);
-      padding: 16px 16px 14px;
-      border: 1px solid var(--border-subtle);
-      box-shadow: var(--shadow-soft);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at top left, rgba(255,255,255,0.1), transparent 60%);
-      opacity: 0.16;
-      pointer-events: none;
-    }
-
-    .card-inner {
-      position: relative;
-      z-index: 1;
-    }
-
-    .card-title-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    .card-title {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-    }
-
-    .badge {
-      padding: 3px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      color: var(--text-secondary);
-      background: rgba(255, 255, 255, 0.04);
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: var(--accent);
-    }
-
-    .text-muted {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-
-    .threshold-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-      margin-top: 6px;
-    }
-
-    .threshold-table th,
-    .threshold-table td {
-      padding: 4px 6px;
-      text-align: left;
-    }
-
-    .threshold-table th {
-      color: var(--text-secondary);
-      font-weight: 500;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-    }
-
-    .threshold-table td {
-      color: var(--text-primary);
-      border-bottom: 1px solid rgba(255,255,255,0.03);
-    }
-
-    .threshold-tag {
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 10px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.14);
-      color: var(--text-secondary);
-    }
-
-    .flex {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      flex: 1 1 140px;
-      min-width: 130px;
-    }
-
-    label {
-      font-size: 11px;
-      margin-bottom: 4px;
-      color: var(--text-secondary);
-    }
-
-    input {
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border-subtle);
-      font-size: 13px;
-      background: rgba(10,10,10,0.9);
-      color: var(--text-primary);
-      outline: none;
-      transition: border 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-    }
-
-    input::placeholder {
-      color: #55555c;
-    }
-
-    input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent-soft);
-      background: #101014;
-    }
-
     button {
-      border-radius: 999px;
       border: none;
-      padding: 8px 18px;
-      font-size: 13px;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 14px;
       cursor: pointer;
-      background: linear-gradient(135deg, #0a84ff, #4f9eff);
-      color: #ffffff;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      font-weight: 500;
+      background: #111;
+      color: #fff;
     }
-
-    button.secondary {
-      background: transparent;
-      border: 1px solid rgba(255, 69, 58, 0.5);
-      color: #ff453a;
-    }
-
     button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
     }
-
-    .btn-row {
+    .log {
       margin-top: 12px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .hint-text {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .summary-card {
-      margin-bottom: 16px;
-    }
-
-    .summary-items {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 16px;
+      font-family: "SF Mono", Menlo, monospace;
       font-size: 12px;
+      max-height: 260px;
+      overflow-y: auto;
+      background: #000;
+      color: #0f0;
+      padding: 12px;
+      border-radius: 8px;
+      white-space: pre-wrap;
     }
-
-    .summary-label {
-      color: var(--text-secondary);
-    }
-
-    .summary-value {
-      color: var(--text-primary);
-      font-weight: 600;
-      margin-left: 4px;
-    }
-
-    .summary-chip {
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: var(--text-secondary);
-    }
-
-    .data-card {
-      background: radial-gradient(circle at top, #17171a 0, #101010 60%);
-      border-radius: var(--radius-lg);
-      padding: 14px 14px 12px;
-      border: 1px solid var(--border-subtle);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .table-wrapper {
-      max-height: 420px;
-      overflow: auto;
-      border-radius: var(--radius-md);
-      border: 1px solid rgba(255,255,255,0.08);
-      background: radial-gradient(circle at top, #1c1c1e 0, #050506 65%);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-      min-width: 900px;
-    }
-
-    th, td {
-      padding: 6px 8px;
-      text-align: center;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      color: var(--text-secondary);
-    }
-
-    th {
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      background: rgba(8,8,8,0.96);
-      backdrop-filter: blur(12px);
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-size: 10px;
-    }
-
-    td {
-      color: var(--text-primary);
-    }
-
-    tr:nth-child(even) td {
-      background: rgba(255,255,255,0.01);
-    }
-
-    tr:hover td {
-      background: rgba(255,255,255,0.03);
-    }
-
     .tag {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display: inline-block;
+      font-size: 11px;
       padding: 2px 8px;
       border-radius: 999px;
-      font-size: 10px;
-      gap: 4px;
-    }
-
-    .tag-good {
-      background: var(--good-soft);
-      color: var(--good);
-      border: 1px solid rgba(48, 209, 88, 0.7);
-    }
-
-    .tag-bad {
-      background: var(--bad-soft);
-      color: var(--bad);
-      border: 1px solid rgba(255, 69, 58, 0.7);
-    }
-
-    .dot-mini {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: currentColor;
-    }
-
-    .metric-badge {
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 10px;
-      border: 1px solid rgba(255,255,255,0.16);
-      color: var(--text-secondary);
-    }
-
-    .metric-badge-pass {
-      border-color: rgba(48, 209, 88, 0.7);
-      color: var(--good);
-      background: rgba(48,209,88,0.12);
-    }
-
-    .metric-badge-fail {
-      border-color: rgba(255, 69, 58, 0.7);
-      color: var(--bad);
-      background: rgba(255,69,58,0.12);
-    }
-
-    .number-cell {
-      font-variant-numeric: tabular-nums;
-      font-feature-settings: "tnum" 1, "lnum" 1;
-    }
-
-    .blur-top {
-      position: fixed;
-      top: -100px;
-      right: -60px;
-      width: 280px;
-      height: 280px;
-      background: radial-gradient(circle, rgba(10,132,255,0.25), transparent 70%);
-      filter: blur(40px);
-      opacity: 0.6;
-      pointer-events: none;
-      z-index: -1;
+      background: #eee;
+      margin-left: 8px;
     }
   </style>
 </head>
 <body>
-  <div class="blur-top"></div>
-  <div class="app-shell">
-    <header>
-      <div class="title-row">
-        <div>
-          <h1>
-            留存 & 充值分析
-            <span class="pill">COHORT ANALYTICS</span>
-          </h1>
-          <p class="subtitle">
-            手动输入每个批次的数据，系统按你设定的标准，直接告诉你这条是 <strong>好</strong> 还是 <strong>坏</strong>。
-          </p>
-        </div>
-      </div>
-    </header>
+  <div class="container">
+    <h1>
+      CSV 导入后台
+      <span class="tag">连接 Google Sheets · wps</span>
+    </h1>
+    <div style="font-size: 13px; color:#666;">
+      当前配置：直接写入表 <strong>wps</strong>（表格 ID 封装在后端脚本里）。
+    </div>
 
-    <!-- 上半部分：左侧输入，右侧标准说明 -->
-    <div class="card-grid">
-      <!-- 输入卡片 -->
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-title-row">
-            <div class="card-title">输入数据</div>
-            <span class="badge">
-              <span class="dot"></span> 离线本地计算
-            </span>
-          </div>
-          <p class="text-muted">
-            建议一条记录 = 一天 / 一个渠道 / 一个投放包。所有数值按 <strong>百分比直接填数字</strong>（例如 25% 就填 25）。
-          </p>
-          <form id="dataForm">
-            <div class="flex" style="margin-bottom:8px;">
-              <div class="field" style="flex-basis: 220px;">
-                <label>名称（必填，如「巴西-SMS-11/29」）</label>
-                <input type="text" id="name" placeholder="某个批次 / 渠道 / 日期" required />
-              </div>
-              <div class="field" style="flex-basis: 160px;">
-                <label>日期（可选）</label>
-                <input type="date" id="date" />
-              </div>
-            </div>
+    <div class="card">
+      <label>选择要导入的 CSV 文件：</label>
+      <input type="file" id="csvFile" accept=".csv,text/csv" />
 
-            <div class="flex" style="margin-bottom:8px;">
-              <div class="field">
-                <label>人均首存金额（≥ 21）</label>
-                <input type="number" id="avgFirst" step="0.01" min="0" placeholder="例如 23.5" />
-              </div>
-              <div class="field">
-                <label>人均充值金额（≥ 45）</label>
-                <input type="number" id="avgRecharge" step="0.01" min="0" placeholder="例如 52.1" />
-              </div>
-              <div class="field">
-                <label>复存率 %（≥ 30）</label>
-                <input type="number" id="repeatRate" step="0.1" min="0" max="100" placeholder="例如 34" />
-              </div>
-            </div>
-
-            <div class="flex">
-              <div class="field">
-                <label>2 日留存 %（≥ 25）</label>
-                <input type="number" id="r2" step="0.1" min="0" max="100" placeholder="例如 27" />
-              </div>
-              <div class="field">
-                <label>3 日留存 %（≥ 17）</label>
-                <input type="number" id="r3" step="0.1" min="0" max="100" placeholder="例如 19" />
-              </div>
-              <div class="field">
-                <label>4 日留存 %（≥ 15）</label>
-                <input type="number" id="r4" step="0.1" min="0" max="100" placeholder="例如 16" />
-              </div>
-              <div class="field">
-                <label>5 日留存 %（≥ 13）</label>
-                <input type="number" id="r5" step="0.1" min="0" max="100" placeholder="例如 14" />
-              </div>
-            </div>
-
-            <div class="flex" style="margin-top:6px;">
-              <div class="field">
-                <label>6 日留存 %（≥ 12）</label>
-                <input type="number" id="r6" step="0.1" min="0" max="100" placeholder="例如 13" />
-              </div>
-              <div class="field">
-                <label>7 日留存 %（≥ 10）</label>
-                <input type="number" id="r7" step="0.1" min="0" max="100" placeholder="例如 11" />
-              </div>
-              <div class="field">
-                <label>30 日留存 %（≥ 4.5）</label>
-                <input type="number" id="r30" step="0.1" min="0" max="100" placeholder="例如 5.2" />
-              </div>
-              <div class="field">
-                <label>60 日留存 %（≥ 2.5）</label>
-                <input type="number" id="r60" step="0.1" min="0" max="100" placeholder="例如 3.0" />
-              </div>
-            </div>
-
-            <div class="btn-row">
-              <button type="submit">
-                <span>添加记录</span>
-              </button>
-              <button type="button" id="clearAll" class="secondary">
-                清空所有记录
-              </button>
-              <span class="hint-text">
-                所有数据只保留在你的浏览器里，刷新就会消失。
-              </span>
-            </div>
-          </form>
-        </div>
+      <div class="row">
+        <label style="display:flex;align-items:center;font-size:13px;">
+          <input type="checkbox" id="skipHeader" checked style="margin-right:6px;" />
+          第一行是表头（跳过第一行）
+        </label>
       </div>
 
-      <!-- 阈值说明卡片 -->
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-title-row">
-            <div class="card-title">达标标准</div>
-            <span class="badge">
-              <span class="dot"></span> Apple 风暗色 UI
-            </span>
-          </div>
-          <p class="text-muted">
-            系统会对以下 <strong>11 项指标</strong> 逐个判断。如果 11 项全部达到下限，这条记录就会被判定为「好（达标）」。
-          </p>
-
-          <table class="threshold-table">
-            <thead>
-              <tr>
-                <th>指标</th>
-                <th>下限</th>
-                <th>说明</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>人均首存</td>
-                <td>≥ 21</td>
-                <td><span class="threshold-tag">新人首笔平均金额</span></td>
-              </tr>
-              <tr>
-                <td>人均充值</td>
-                <td>≥ 45</td>
-                <td><span class="threshold-tag">所有付费用户的平均总充值</span></td>
-              </tr>
-              <tr>
-                <td>复存率</td>
-                <td>≥ 30%</td>
-                <td><span class="threshold-tag">有第二次充值的占比</span></td>
-              </tr>
-              <tr>
-                <td>2 日留存</td>
-                <td>≥ 25%</td>
-                <td rowspan="6"><span class="threshold-tag">短期留存（2–7 日）</span></td>
-              </tr>
-              <tr>
-                <td>3 日留存</td>
-                <td>≥ 17%</td>
-              </tr>
-              <tr>
-                <td>4 日留存</td>
-                <td>≥ 15%</td>
-              </tr>
-              <tr>
-                <td>5 日留存</td>
-                <td>≥ 13%</td>
-              </tr>
-              <tr>
-                <td>6 日留存</td>
-                <td>≥ 12%</td>
-              </tr>
-              <tr>
-                <td>7 日留存</td>
-                <td>≥ 10%</td>
-              </tr>
-              <tr>
-                <td>30 日留存</td>
-                <td>≥ 4.5%</td>
-                <td rowspan="2"><span class="threshold-tag">中长期粘性（30 & 60 日）</span></td>
-              </tr>
-              <tr>
-                <td>60 日留存</td>
-                <td>≥ 2.5%</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <p class="text-muted" style="margin-top:8px;">
-            在明细表中，你会看到每条记录「通过 X / 11 项」，方便你快速定位问题到底出在
-            <strong>首存 / 复存 / 短留存 / 长留存</strong> 哪一块。
-          </p>
-        </div>
+      <div class="row">
+        <button id="uploadBtn">上传并导入</button>
+        <span id="statusText" style="font-size:13px;color:#666;"></span>
       </div>
     </div>
 
-    <!-- 汇总卡片 -->
-    <div class="card summary-card" id="summaryCard" style="display:none;">
-      <div class="card-inner">
-        <div class="card-title-row">
-          <div class="card-title">整体情况</div>
-          <span class="badge">
-            <span class="dot"></span> 实时统计
-          </span>
-        </div>
-        <div class="summary-items" id="summaryContent"></div>
-      </div>
-    </div>
-
-    <!-- 数据列表 -->
-    <div class="data-card">
-      <div class="card-title-row" style="margin-bottom:8px;">
-        <div class="card-title">明细记录</div>
-        <span class="summary-chip" id="listHint">当前暂无记录</span>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>名称</th>
-              <th>日期</th>
-              <th>人均首存</th>
-              <th>人均充值</th>
-              <th>复存率%</th>
-              <th>2D%</th>
-              <th>3D%</th>
-              <th>4D%</th>
-              <th>5D%</th>
-              <th>6D%</th>
-              <th>7D%</th>
-              <th>30D%</th>
-              <th>60D%</th>
-              <th>通过项</th>
-              <th>好 / 坏</th>
-            </tr>
-          </thead>
-          <tbody id="dataBody">
-            <!-- JS 渲染 -->
-          </tbody>
-        </table>
-      </div>
+    <div class="card">
+      <div style="font-size:13px;margin-bottom:6px;">导入日志：</div>
+      <div id="logBox" class="log"></div>
     </div>
   </div>
 
   <script>
-    (function () {
-      const data = []; // 所有记录存这里（仅存在内存中）
+    // TODO: 
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzm5sSBYnrUkni-Gjpd2STk8v3VJEA8rh2JvCrcg8j_1dEHtqjGdXETg0LplD0GkNVx/exec";
 
-      const thresholds = {
-        avgFirst: 21,
-        avgRecharge: 45,
-        repeatRate: 30,
-        r2: 25,
-        r3: 17,
-        r4: 15,
-        r5: 13,
-        r6: 12,
-        r7: 10,
-        r30: 4.5,
-        r60: 2.5
+    const fileInput = document.getElementById("csvFile");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const skipHeaderCheckbox = document.getElementById("skipHeader");
+    const statusText = document.getElementById("statusText");
+    const logBox = document.getElementById("logBox");
+
+    function log(message) {
+      const time = new Date().toISOString().replace("T", " ").replace("Z", "");
+      logBox.textContent = `[${time}] ${message}\n` + logBox.textContent;
+    }
+
+    uploadBtn.addEventListener("click", () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        alert("先选一个 CSV 文件。");
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      statusText.textContent = "正在上传并导入...";
+      log(`开始导入文件：${file.name}`);
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const csvText = e.target.result;
+
+        try {
+          const res = await fetch(WEB_APP_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json;charset=utf-8"
+            },
+            body: JSON.stringify({
+              csv: csvText,
+              skipHeader: skipHeaderCheckbox.checked
+            })
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            statusText.textContent = `导入成功：${data.insertedRows || 0} 行`;
+            log(`✅ 导入成功：${data.insertedRows || 0} 行，起始行：${data.startRow || "未知"}`);
+          } else {
+            statusText.textContent = "导入失败";
+            log(`❌ 导入失败：${data.message || "未知错误"}`);
+          }
+        } catch (err) {
+          console.error(err);
+          statusText.textContent = "请求异常";
+          log(`❌ 请求异常：${err}`);
+        } finally {
+          uploadBtn.disabled = false;
+        }
       };
 
-      const dataForm = document.getElementById('dataForm');
-      const clearAllBtn = document.getElementById('clearAll');
-      const dataBody = document.getElementById('dataBody');
-      const summaryCard = document.getElementById('summaryCard');
-      const summaryContent = document.getElementById('summaryContent');
-      const listHint = document.getElementById('listHint');
+      reader.onerror = (e) => {
+        console.error(e);
+        statusText.textContent = "读取文件失败";
+        log("❌ 读取文件失败");
+        uploadBtn.disabled = false;
+      };
 
-      function parseNumber(value) {
-        const n = parseFloat(value);
-        return isNaN(n) ? 0 : n;
-      }
-
-      function evaluateRecord(record) {
-        const passMap = {
-          avgFirst: record.avgFirst >= thresholds.avgFirst,
-          avgRecharge: record.avgRecharge >= thresholds.avgRecharge,
-          repeatRate: record.repeatRate >= thresholds.repeatRate,
-          r2: record.r2 >= thresholds.r2,
-          r3: record.r3 >= thresholds.r3,
-          r4: record.r4 >= thresholds.r4,
-          r5: record.r5 >= thresholds.r5,
-          r6: record.r6 >= thresholds.r6,
-          r7: record.r7 >= thresholds.r7,
-          r30: record.r30 >= thresholds.r30,
-          r60: record.r60 >= thresholds.r60
-        };
-        const keys = Object.keys(passMap);
-        const passCount = keys.reduce((acc, key) => acc + (passMap[key] ? 1 : 0), 0);
-        const totalMetrics = keys.length;
-        const allPass = passCount === totalMetrics;
-
-        return {
-          passMap,
-          passCount,
-          totalMetrics,
-          allPass
-        };
-      }
-
-      function render() {
-        dataBody.innerHTML = '';
-
-        if (data.length === 0) {
-          summaryCard.style.display = 'none';
-          listHint.textContent = '当前暂无记录';
-          return;
-        }
-
-        let goodCount = 0;
-        let badCount = 0;
-        let best7d = null;
-
-        data.forEach((item) => {
-          item.eval = evaluateRecord(item);
-          if (item.eval.allPass) goodCount++;
-          else badCount++;
-
-          if (!best7d || item.r7 > best7d.r7) {
-            best7d = item;
-          }
-
-          const tr = document.createElement('tr');
-
-          function td(text, cls) {
-            const cell = document.createElement('td');
-            if (cls) cell.className = cls;
-            cell.textContent = text;
-            return cell;
-          }
-
-          tr.appendChild(td(item.name || '-'));
-          tr.appendChild(td(item.date || '-'));
-          tr.appendChild(td(item.avgFirst.toFixed(2), 'number-cell'));
-          tr.appendChild(td(item.avgRecharge.toFixed(2), 'number-cell'));
-          tr.appendChild(td(item.repeatRate.toFixed(1), 'number-cell'));
-          tr.appendChild(td(item.r2.toFixed(1), 'number-cell'));
-          tr.appendChild(td(item.r3.toFixed(1), 'number-cell'));
-          tr.appendChild(td(item.r4.toFixed(1), 'number-cell'));
-          tr.appendChild(td(item.r5.toFixed(1), 'number-cell'));
-          tr.appendChild(td(item.r6.toFixed(1), 'number-cell'));
-          tr.appendChild(td(item.r7.toFixed(1), 'number-cell'));
-          tr.appendChild(td(item.r30.toFixed(1), 'number-cell'));
-          tr.appendChild(td(item.r60.toFixed(1), 'number-cell'));
-
-          // 通过项
-          const passTd = document.createElement('td');
-          const passBadge = document.createElement('span');
-          passBadge.className = 'metric-badge ' + (item.eval.allPass ? 'metric-badge-pass' : 'metric-badge-fail');
-          passBadge.textContent = `${item.eval.passCount} / ${item.eval.totalMetrics}`;
-          passTd.appendChild(passBadge);
-          tr.appendChild(passTd);
-
-          // 好 / 坏
-          const statusTd = document.createElement('td');
-          const tag = document.createElement('span');
-          tag.className = 'tag ' + (item.eval.allPass ? 'tag-good' : 'tag-bad');
-          const dot = document.createElement('span');
-          dot.className = 'dot-mini';
-          tag.appendChild(dot);
-          const text = document.createElement('span');
-          text.textContent = item.eval.allPass ? '好（达标）' : '坏（未达标）';
-          tag.appendChild(text);
-          statusTd.appendChild(tag);
-          tr.appendChild(statusTd);
-
-          dataBody.appendChild(tr);
-        });
-
-        listHint.textContent = `共 ${data.length} 条记录 · 好：${goodCount} · 坏：${badCount}`;
-
-        // 汇总
-        summaryCard.style.display = 'block';
-        const goodRate = data.length ? (goodCount / data.length) * 100 : 0;
-
-        let html = '';
-        html += `<div><span class="summary-label">总记录</span><span class="summary-value">${data.length}</span></div>`;
-        html += `<div><span class="summary-label">达标</span><span class="summary-value">${goodCount}</span></div>`;
-        html += `<div><span class="summary-label">未达标</span><span class="summary-value">${badCount}</span></div>`;
-        html += `<div><span class="summary-label">达标占比</span><span class="summary-value">${goodRate.toFixed(1)}%</span></div>`;
-
-        if (best7d) {
-          html += `<div><span class="summary-label">7日留存最高</span><span class="summary-value">${best7d.name}</span><span class="summary-value"> · ${best7d.r7.toFixed(1)}%</span></div>`;
-        }
-
-        summaryContent.innerHTML = html;
-      }
-
-      dataForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-
-        const name = document.getElementById('name').value.trim();
-        if (!name) {
-          alert('名称必填，比如「巴西-SMS-11/29」。');
-          return;
-        }
-
-        const record = {
-          name,
-          date: document.getElementById('date').value || '',
-          avgFirst: parseNumber(document.getElementById('avgFirst').value),
-          avgRecharge: parseNumber(document.getElementById('avgRecharge').value),
-          repeatRate: parseNumber(document.getElementById('repeatRate').value),
-          r2: parseNumber(document.getElementById('r2').value),
-          r3: parseNumber(document.getElementById('r3').value),
-          r4: parseNumber(document.getElementById('r4').value),
-          r5: parseNumber(document.getElementById('r5').value),
-          r6: parseNumber(document.getElementById('r6').value),
-          r7: parseNumber(document.getElementById('r7').value),
-          r30: parseNumber(document.getElementById('r30').value),
-          r60: parseNumber(document.getElementById('r60').value),
-          eval: null
-        };
-
-        data.push(record);
-        dataForm.reset();
-        render();
-      });
-
-      clearAllBtn.addEventListener('click', function () {
-        if (!data.length) return;
-        if (confirm('确定要清空所有记录吗？这个操作不可恢复。')) {
-          data.length = 0;
-          render();
-        }
-      });
-
-      render();
-    })();
+      reader.readAsText(file, "utf-8");
+    });
   </script>
 </body>
 </html>
